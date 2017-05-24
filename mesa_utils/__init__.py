@@ -1,6 +1,6 @@
 import mesa_reader as ms
 import matplotlib.pyplot as plt
-# import numpy as np
+import numpy as np
 
 __all__ = ['hrd', 'abun_plot']
 
@@ -119,3 +119,59 @@ def abun_plot(folder, mod_n=None, x_lim=12, title=None,
         return 'File save with name ' + name
     else:
         plt.show()
+
+
+def get_centerMass(path):
+    '''
+    Extract the central mass of h1, he4, c12, n14, o16, ne20 and mg24
+    from the LOGS directory
+
+    Parameters
+    ----------
+    path    : string
+            LOGS directory path
+
+    Returns
+    -------
+    numpy array with initial mass and central values of h1, he4, c12, n14,
+    o16, ne20 and mg24
+    '''
+
+    fol = ms.MesaLogDir(log_path=path)
+    h = fol.history
+    c_h1 = h.data('center_h1')
+    c_he4 = h.data('center_he4')
+    c_c12 = h.data('center_c12')
+    c_n14 = h.data('center_n14')
+    c_o16 = h.data('center_o16')
+    c_ne20 = h.data('center_ne20')
+    mi = h.data('star_mass')
+
+    prof_numbers = fol.profile_numbers
+    prof = fol.profile_data(profile_number=prof_numbers[-1])
+    c_mg24 = prof.data('mg24')
+
+    return np.array([mi[0], c_h1[-1], c_he4[-1], c_c12[-1],
+                     c_n14[-1], c_o16[-1], c_ne20[-1], c_mg24[0]])
+    # return np.array([mass, c_c12[-1], c_o16[-1], c_ne20[-1], c_mg24[0]])
+    # return [mass, ' | ', c_c12[-1], ' | ', c_o16[-1], ' | ', c_ne20[-1],
+    #         ' | ', c_mg24[-1]]
+
+
+def print_c_mass(list_path):
+    '''
+    Print the initial mass and center values of h1, he4, c12, n14, o16, ne20
+    and mg24
+
+    Parameter
+    --------
+    list_path   : list of strings
+            list of all LOGS directories that are going to be analized
+    '''
+
+    np.set_printoptions(formatter={'float': '{: 0.5}'.format})
+    # print('Mass (Msun), center c12, center o16, center ne20, center mg24')
+    print('Mass(Mo), c_h1, c_he4, c_c12, c_n14, c_o16, c_ne20, c_mg24')
+    for i in list_path:
+        c_mass = get_centerMass(i)
+        print(c_mass)
