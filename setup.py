@@ -10,7 +10,7 @@ setup(name='mesa_utils',
       packages=['mesa_utils'],
       install_requires=[
           'numpy',
-          'matplotlib'
+          'matplotlib',
           'mesa_reader'
       ],
       dependency_links=['https://github.com/wmwolf/py_mesa_reader'],
