@@ -103,6 +103,7 @@ def abun_plot(folder, mod_n=None, x_lim=12, title=None,
         x = - prof.data('logxq')
     else:
         x = prof.data('q')
+        x_lim = 1
 
     h1 = prof.data('h1')
     he3 = prof.data('he3')
