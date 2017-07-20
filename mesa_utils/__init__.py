@@ -46,9 +46,10 @@ def hrd(folder, title=None, save=False, name=None):
 
 
 def abun_plot(folder, mod_n=None, x_lim=12, title=None,
-              save=False, name=None, isotope=None):
+              save=False, name=None, isotope=None, x_axis='atm'):
     '''
-    Plot the abundance profile at model number
+    Plot the abundance profile at model number using log(1-q) on x-axis
+    (better to see information on atmosfere)
 
     Parameter
     ---------
@@ -65,6 +66,9 @@ def abun_plot(folder, mod_n=None, x_lim=12, title=None,
             if True, save a .png file of the plot
     name    : str
             name of the .png file if the parameter save is True
+    x_axis  : str
+            can be 'atm' or 'nuc'. If 'atm' is chosen, x-axis will be -log(1-q)
+            (better for atmosfere region). If 'nuc', x-axis will be q (better for nucleus region). Default is 'atm'
     isotope: Not implemented yet
 
     Returns
@@ -87,13 +91,18 @@ def abun_plot(folder, mod_n=None, x_lim=12, title=None,
     if mod_n is None:
         profiles = path.model_numbers
         model = profiles[-1]
+        m_ind = -1
     else:
         model = mod_n
+        m_ind = mod_n
 
     prof = path.profile_data(model)
     # isos = ['h1', 'he4', 'c12', 'n14', 'o16', 'ne20', 'mg24']
     # for i in isos:
-    x = - prof.data('logxq')
+    if x_axis == 'atm':
+        x = - prof.data('logxq')
+    else:
+        x = prof.data('q')
 
     h1 = prof.data('h1')
     he3 = prof.data('he3')
@@ -129,8 +138,8 @@ def abun_plot(folder, mod_n=None, x_lim=12, title=None,
     plt.ylabel('mass fraction')
     plt.suptitle(title)
     plt.title('Abundance at model ' + str(model) + r' $M_i = $ ' +
-              str(mass[0]) + r' $M_f = $ ' + str(mass[model]) +
-              r' $Teff = $ ' + str(10**teff[model]))
+              str(mass[0]) + r' $M_f = $ ' + str(mass[m_ind]) +
+              r' $Teff = $ ' + str(10**teff[m_ind]))
 
     plt.legend(bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0.)
 
