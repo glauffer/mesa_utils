@@ -85,7 +85,7 @@ def abun_plot(folder, mod_n=None, x_lim=12, title=None,
     teff = hist.data('log_Teff')
 
     if mod_n is None:
-        profiles = path.profile_numbers
+        profiles = path.model_numbers
         model = profiles[-1]
     else:
         model = mod_n
