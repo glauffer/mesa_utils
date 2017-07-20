@@ -101,9 +101,11 @@ def abun_plot(folder, mod_n=None, x_lim=12, title=None,
     # for i in isos:
     if x_axis == 'atm':
         x = - prof.data('logxq')
+        xlabel = r'$\log (1 - q)$'
     else:
         x = prof.data('q')
         x_lim = 1
+        xlabel = r'$\frac{m}{M}$'
 
     h1 = prof.data('h1')
     he3 = prof.data('he3')
@@ -135,7 +137,7 @@ def abun_plot(folder, mod_n=None, x_lim=12, title=None,
     plt.plot(x, h1, color='b', lw=1.5, label=r'$H1$')
 
     plt.xlim(0, x_lim)
-    plt.xlabel(r'$\log (1 - q)$')
+    plt.xlabel(xlabel)
     plt.ylabel('mass fraction')
     plt.suptitle(title)
     plt.title('Abundance at model ' + str(model) + r' $M_i = $ ' +
