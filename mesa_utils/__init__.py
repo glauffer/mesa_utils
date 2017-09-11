@@ -293,9 +293,93 @@ def out_dir(out):
         return os.path.abspath(out)
 
 
-def mod_abun(path, h_mass, name='abun.dat', output=None, profile_number=None, isotope='he4'):
+def exchange_isotopes(isotope1, isotope2, amount, df):
     '''
+    Function to exchange an amount of iso1 by iso2
 
+    Parameters:
+    -----------
+    isotope1    : str
+                isotope which will be replaced or reduced by *amount*
+    isotope2    : str
+                isotope to be add or increased
+    amount      : float
+                amount of iso2 will be add (this value will multiply Mstar)
+    df          : Pandas DataFrame
+                Dataframe with 'q', 'dm', 'xm', isotopes...
+
+    Returns:
+    --------
+    Pandas DataFrame with new abundance profile to be used by MESA
+    '''
+    iso1 = str(isotope1)
+    iso2 = str(isotope2)
+
+    # Achar todos os indices em que he4 possui massa inferior a mx.
+    # Para isto, primeiro eu faço a soma cumulativa da atmosfera até o nucleo
+    # e identifico os valores menores que mx
+
+    # m_he4 = df['he4'].multiply(df['dm'], axis="index").multiply(
+    #    5.027652086e-34).cumsum()
+    amount_iso1 = df[iso1].multiply(df['dm'], axis='index').multiply(
+        5.027652086e-34).cumsum()
+
+    # array com True onde m_he4 for  menor ou igual a m
+    # pos = m_he4.loc[:] <= m  # + 0.05 * m
+    pos = amount_iso1.loc[:] <= amount  # + 0.05 * m
+
+    isotope2 = df[iso2]
+    # he4 = df['he4']
+    isotope1 = df[iso1]
+    # Substituindo He por H
+    # h1[pos] = he4[pos]
+    isotope2[pos] = isotope1[pos]
+    # Igualando He = 0 nos locais em que houve a substituicao
+    # he4[pos] = 0
+    isotope1[pos] = 0
+
+    # Aplicando o filtro gaussiano
+    gf_iso2 = scipy.ndimage.gaussian_filter(isotope2, 3)
+    # gf_he4 = scipy.ndimage.gaussian_filter(he4, 3)
+    gf_iso1 = scipy.ndimage.gaussian_filter(isotope1, 3)
+
+    new_data = df.copy()
+    new_data[iso2] = gf_iso2
+    # new_data['he4'] = gf_he4
+    new_data[iso1] = gf_iso1
+    # data_clean = new_data.drop(['q', 'dm'], axis=1)
+
+    return new_data
+
+
+def mod_abun(path, h12=None, h23=None, name='abun.dat', output=None,
+             profile_number=None, iso1=None, iso2='he4', iso3='h1'):
+    '''
+    Parameters:
+    -----------
+    path            : str
+                    LOGS folder
+    h12            : float
+                    mass of iso1 to exchange by iso2 (usually mass of c12 to
+                    exhange by he4)
+    h23            : float
+                    h12 = mass of iso2 to exchange by iso3 (usually mass of
+                    he4 to exhange by h1)
+    name           : str
+                    name of output file
+    ouput          : str
+                    output directory. If None, output to current folder
+    profile_number : int
+                    profile number to extract information. If None, program
+                    will search for last profile
+    iso1           : str
+                    first isotope to exchange mass. Usually c12, default is
+                    None -> in this case exchange only he4 by h1
+    iso2           : str
+                    second isotope to exchange mass. Usually he4, default is
+                    he4
+    iso3           : str
+                    last isotope to exchange mass. Usually h1, default is h1
     '''
 
     out = out_dir(output)
@@ -310,9 +394,8 @@ def mod_abun(path, h_mass, name='abun.dat', output=None, profile_number=None, is
     else:
         model = profile_number
         model_index = profile_number - 1
-    prof = path.profile_data(model)
 
-    iso = str(isotope)
+    prof = path.profile_data(model)
 
     headers = ['q', 'dm', 'xm', 'h1', 'he3', 'he4', 'c12',
                'c13', 'n13', 'n14', 'n15', 'o16', 'o17',
@@ -327,42 +410,25 @@ def mod_abun(path, h_mass, name='abun.dat', output=None, profile_number=None, is
                      prof.data('si28')])
 
     df = pd.DataFrame(data.T, columns=headers)
-    m = h_mass * star_m[model_index]
 
-    # Achar todos os indices em que he4 possui massa inferior a mx.
-    # Para isto, primeiro eu faço a soma cumulativa da atmosfera até o nucleo
-    # e identifico os valores menores que mx
+    if iso1 is None:
+        print('Substituindo {} por {}'.format(str(iso2), str(iso3)))
+        m23 = h23 * star_m[model_index]
+        new_abun = exchange_isotopes(iso2, iso3, m23, df)
+        # print('massa estrela = {}, valor que multiplicou a massa = {}'.format
+        # (star_m[model_index], h23))
+        print('Substituido {} de {} por {}'.format(np.sum(new_abun[str(iso3)] * df['dm'] * 5.027652086e-34), str(iso2), str(iso3)))
+    else:
+        print('Substituindo {} por {}'.format(str(iso1), str(iso2)))
+        print('E tambem substituindo {} por {}'.format(str(iso2), str(iso1)))
+        m12 = h12 * star_m[model_index]
+        abun12 = exchange_isotopes(iso1, iso2, m12, df)
+        m23 = h23 * star_m[model_index]
+        new_abun = exchange_isotopes(iso2, iso3, m23, abun12)
+        print('Substituido {} de {} por {}'.format(np.sum(new_abun[str(iso2)] * df['dm'] * 5.027652086e-34), str(iso1), str(iso2)))
+        print('Substituido {} de {} por {}'.format(np.sum(new_abun[str(iso3)] * df['dm'] * 5.027652086e-34), str(iso2), str(iso3)))
 
-    # m_he4 = df['he4'].multiply(df['dm'], axis="index").multiply(
-    #    5.027652086e-34).cumsum()
-    m_iso = df[iso].multiply(df['dm'], axis='index').multiply(
-        5.027652086e-34).cumsum()
-
-    # array com True onde m_he4 for  menor ou igual a m
-    # pos = m_he4.loc[:] <= m  # + 0.05 * m
-    pos = m_iso.loc[:] <= m  # + 0.05 * m
-
-    h1 = df['h1']
-    # he4 = df['he4']
-    isotope = df[iso]
-    # Substituindo He por H
-    # h1[pos] = he4[pos]
-    h1[pos] = isotope[pos]
-    # Igualando He = 0 nos locais em que houve a substituicao
-    # he4[pos] = 0
-    isotope[pos] = 0
-
-    # Aplicando o filtro gaussiano
-    gf_h1 = scipy.ndimage.gaussian_filter(h1, 3)
-    # gf_he4 = scipy.ndimage.gaussian_filter(he4, 3)
-    gf_iso = scipy.ndimage.gaussian_filter(isotope, 3)
-
-    new_data = df.copy()
-    new_data['h1'] = gf_h1
-    # new_data['he4'] = gf_he4
-    new_data[iso] = gf_iso
-    data_clean = new_data.drop(['q', 'dm'], axis=1)
-
+    data_clean = new_abun.drop(['q', 'dm'], axis=1)
     # Dados de colunas e linhas para o header do arquivo
     h1 = data_clean.shape[0]
     h2 = data_clean.shape[1] - 1
@@ -371,11 +437,7 @@ def mod_abun(path, h_mass, name='abun.dat', output=None, profile_number=None, is
     # Salvando os dados
     np.savetxt(os.path.join(out, str(name)), data_clean, fmt='%1.15f',
                header=header, comments='')
-
-    # Print da quantidade de H1 adicionada
-    print(np.sum(data_clean.h1 * df['dm'] * 5.027652086e-34))
-    print('massa estrela = {}, valor que multiplicou a massa = {}'.format(
-        star_m[model_index], h_mass))
+    # return new_abun
 
 
 def plot_abun_gamma(folder, mod_n=None, x_lim=12, title=' ',
@@ -492,6 +554,83 @@ def plot_abun_gamma(folder, mod_n=None, x_lim=12, title=' ',
     h1, l1 = ax1.get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()
     ax1.legend(h1 + h2, l1 + l2, loc=1)
+
+    if save is True:
+        plt.savefig(name + '.pdf')
+        plt.savefig(name + '.png')
+        return 'File save with name ' + name
+    else:
+        plt.show()
+
+
+def plot_hist(folder, xaxis, yaxis, save=False, name=None):
+    '''
+    Basic function to quick plot any parameter from history file
+
+    Parameters:
+    -----------
+    folder : str
+            LOGS directory
+    xaxis  : str
+            parameter from history to plot on xaxis
+    yaxis  : str
+            parameter from history to plot on yaxis
+    save    : bool
+            True to save the plot, False to only show. Default is False
+    name    : str
+            if save = True, name is a string with filename to ouput
+    '''
+
+    path = ms.MesaLogDir(folder)
+    hist = path.history
+    x = hist.data(xaxis)
+    y = hist.data(yaxis)
+    plt.plot(x, y, 'k.-')
+    plt.ylabel(yaxis)
+    plt.xlabel(xaxis)
+
+    if save is True:
+        plt.savefig(name + '.pdf')
+        plt.savefig(name + '.png')
+        return 'File save with name ' + name
+    else:
+        plt.show()
+
+
+def plot_prof(folder, xaxis, yaxis, mod_n, save=False, name=None):
+    '''
+    Basic function to quick plot any parameter from profiles file
+
+    Parameters:
+    -----------
+    folder : str
+            LOGS directory
+    xaxis  : str
+            parameter from history to plot on xaxis
+    yaxis  : str
+            parameter from history to plot on yaxis
+    save    : bool
+            True to save the plot, False to only show. Default is False
+    name    : str
+            if save = True, name is a string with filename to ouput
+    '''
+
+    path = ms.MesaLogDir(folder)
+
+    if mod_n is None:
+        profiles = path.model_numbers
+        model = profiles[-1]
+        # m_ind = -1
+    else:
+        model = mod_n
+        # m_ind = -1  # mod_n
+
+    prof = path.profile_data(model)
+    x = prof.data(xaxis)
+    y = prof.data(yaxis)
+    plt.plot(x, y, 'k.-')
+    plt.ylabel(yaxis)
+    plt.xlabel(xaxis)
 
     if save is True:
         plt.savefig(name + '.pdf')
