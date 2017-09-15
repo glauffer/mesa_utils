@@ -12,7 +12,7 @@ setup(name='mesa_utils',
           'numpy',
           'matplotlib',
           'pandas',
-          'mesa_reader'
+          'mesa-reader'
       ],
       dependency_links=['https://github.com/wmwolf/py_mesa_reader'],
       zip_safe=False,)
