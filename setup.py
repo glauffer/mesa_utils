@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='mesa_utils',
-      version='0.2',
+      version='0.3',
       description='Functions to work and plot MESA data',
       url='http://github.com/glauffer/mesa_utils',
       author='Gabriel Lauffer Ramos',
@@ -11,6 +11,7 @@ setup(name='mesa_utils',
       install_requires=[
           'numpy',
           'matplotlib',
+          'pandas',
           'mesa_reader'
       ],
       dependency_links=['https://github.com/wmwolf/py_mesa_reader'],
