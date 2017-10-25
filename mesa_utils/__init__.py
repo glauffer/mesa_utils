@@ -355,6 +355,8 @@ def exchange_isotopes(isotope1, isotope2, amount, df):
 def mod_abun(path, h12=None, h23=None, name='abun.dat', output=None,
              profile_number=None, iso1=None, iso2='he4', iso3='h1'):
     '''
+    Function to modify abundance profile of one star
+    
     Parameters:
     -----------
     path            : str
@@ -420,7 +422,7 @@ def mod_abun(path, h12=None, h23=None, name='abun.dat', output=None,
         print('Substituido {} de {} por {}'.format(np.sum(new_abun[str(iso3)] * df['dm'] * 5.027652086e-34), str(iso2), str(iso3)))
     else:
         print('Substituindo {} por {}'.format(str(iso1), str(iso2)))
-        print('E tambem substituindo {} por {}'.format(str(iso2), str(iso1)))
+        print('E tambem substituindo {} por {}'.format(str(iso2), str(iso3)))
         m12 = h12 * star_m[model_index]
         abun12 = exchange_isotopes(iso1, iso2, m12, df)
         m23 = h23 * star_m[model_index]
@@ -544,9 +546,9 @@ def plot_abun_gamma(folder, mod_n=None, x_lim=12, title=' ',
 
     ax2.plot(x, gamma, 'k--', label=r'$\Gamma$')
     ax2.set_ylabel('Gamma')
-    ax2.axhline(175, ls=':', c='r', alpha=0.8)
+    ax2.axhline(220, ls=':', c='r', alpha=0.8)
 
-    plt.suptitle('Linha horizontal em Gamma=175.  ' + title)
+    plt.suptitle('Linha horizontal em Gamma=220.  ' + title)
     plt.title('Abundance at model ' + str(model) + r' $M_i = $ ' +
               str(mi) + r' $M_f = $ ' + str(mass[m_ind]) +
               r' $Teff = $ ' + str(10**teff[m_ind]))
