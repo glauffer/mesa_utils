@@ -113,32 +113,32 @@ def abun_plot(folder, mod_n=None, x_lim=12, title=' ',
         xlabel = r'$\frac{m}{M}$'
 
     h1 = prof.data('h1')
-    he3 = prof.data('he3')
+    #he3 = prof.data('he3')
     he4 = prof.data('he4')
     c12 = prof.data('c12')
-    c13 = prof.data('c13')
-    n13 = prof.data('n13')
+    #c13 = prof.data('c13')
+    #n13 = prof.data('n13')
     n14 = prof.data('n14')
-    n15 = prof.data('n15')
+    #n15 = prof.data('n15')
     o16 = prof.data('o16')
-    o18 = prof.data('o18')
+    #o18 = prof.data('o18')
     ne20 = prof.data('ne20')
-    ne22 = prof.data('ne22')
+    #ne22 = prof.data('ne22')
     mg24 = prof.data('mg24')
 
     plt.figure(figsize=(14, 7))
-    plt.plot(x, he3, color='c', lw=1.5, label=r'$He3$')
+   # plt.plot(x, he3, color='c', lw=1.5, label=r'$He3$')
     plt.plot(x, he4, color='darkolivegreen', lw=1.5, label=r'$He4$')
     plt.plot(x, c12, color='k', lw=1.5, label=r'$C12$')
-    plt.plot(x, c13, color='grey', lw=1.5, label=r'$C13$')
-    plt.plot(x, n13, color='darkred', lw=1.5, label=r'$N13$')
+   # plt.plot(x, c13, color='grey', lw=1.5, label=r'$C13$')
+   # plt.plot(x, n13, color='darkred', lw=1.5, label=r'$N13$')
     plt.plot(x, n14, color='r', lw=1.5, label=r'$N14$')
-    plt.plot(x, n15, color='salmon', lw=1.5, label=r'$N15$')
+   # plt.plot(x, n15, color='salmon', lw=1.5, label=r'$N15$')
     plt.plot(x, o16, color='g', lw=1.5, label=r'$O16$')
-    plt.plot(x, o18, color='limegreen', lw=1.5, label=r'$O18$')
+   # plt.plot(x, o18, color='limegreen', lw=1.5, label=r'$O18$')
     plt.plot(x, ne20, color='y', lw=1.5, label=r'$Ne20$')
-    plt.plot(x, ne22, color='orange', lw=1.5, label=r'$Ne22$')
-    plt.plot(x, mg24, color='m', lw=1.5, label=r'$Mg24$')
+   # plt.plot(x, ne22, color='orange', lw=1.5, label=r'$Ne22$')
+   # plt.plot(x, mg24, color='m', lw=1.5, label=r'$Mg24$')
     plt.plot(x, h1, color='b', lw=1.5, label=r'$H1$')
 
     plt.xlim(0, x_lim)
@@ -295,6 +295,8 @@ def out_dir(out):
 
 def exchange_isotopes(isotope1, isotope2, amount, df):
     '''
+    v2: exchanged xm by xq = 1 - q
+
     Function to exchange an amount of iso1 by iso2
 
     Parameters:
@@ -306,7 +308,7 @@ def exchange_isotopes(isotope1, isotope2, amount, df):
     amount      : float
                 amount of iso2 will be add (this value will multiply Mstar)
     df          : Pandas DataFrame
-                Dataframe with 'q', 'dm', 'xm', isotopes...
+                Dataframe with 'q', 'dm', 'xq', isotopes...
 
     Returns:
     --------
@@ -399,11 +401,11 @@ def mod_abun(path, h12=None, h23=None, name='abun.dat', output=None,
 
     prof = path.profile_data(model)
 
-    headers = ['q', 'dm', 'xm', 'h1', 'he3', 'he4', 'c12',
+    headers = ['q', 'dm', 'xq', 'h1', 'he3', 'he4', 'c12',
                'c13', 'n13', 'n14', 'n15', 'o16', 'o17',
                'o18', 'f19', 'ne20', 'ne22', 'mg24', 'si28']
 
-    data = np.array([prof.data('q'), prof.data('dm'), prof.data('xm'),
+    data = np.array([prof.data('q'), prof.data('dm'), 1 - prof.data('q'),
                      prof.data('h1'), prof.data('he3'), prof.data('he4'),
                      prof.data('c12'), prof.data('c13'), prof.data('n13'),
                      prof.data('n14'), prof.data('n15'), prof.data('o16'),
