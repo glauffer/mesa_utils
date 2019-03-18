@@ -8,6 +8,306 @@ import os
 __all__ = ['hrd', 'abun_plot', 'get_mat_mcenter', 'print_data']
 
 
+###############################################################################
+#                            Utility functions                                #
+###############################################################################
+
+def _plot(ax, x, y, c, a):
+    ln, = ax.plot(x, y, c, alpha=a)
+    return ln
+
+
+def get_abundance(profile):
+
+    h = profile.h1
+    he = profile.he4
+    c = profile.c12
+    n = profile.n14
+    o = profile.o16
+    ne = profile.ne22
+    mg = profile.mg24
+
+    q = profile.q
+
+    iso = np.dstack((q, h, he, c, n, o, ne, mg))[0]
+    return iso
+
+
+###############################################################################
+#                           Profile data stuff                                #
+###############################################################################
+
+def save_abundance(folder, mod_n=None, name='abundance.dat'):
+    path = ms.MesaLogDir(folder)
+
+    if mod_n is None:
+        profiles = path.model_numbers
+        model = profiles[-1]
+    else:
+        model = mod_n
+
+    prof = path.profile_data(model)
+
+    iso = get_abundance(prof)
+    header = 'Mr/M, h1, he4, c12, n14, o16, ne22, mg24'
+    np.savetxt(name, iso, fmt='%s', header=header)
+    print('file saved with name: ', name)
+
+
+def abundance_plot(profile, ax, xaxis, pos='F'):
+    '''
+    profile: mesa profile
+    ax: matplotlib axis instance
+    xaxis: array with x-axis data
+    pos: 'F' or 'B', means Foreground or Background
+
+    To-Do
+    -----
+
+    '''
+
+    isos = get_abundance(profile)
+
+    if pos == 'F':
+        color = ['b', 'r', 'k', 'r--', 'g', 'y', 'm']
+        a = 1.0  # alpha
+    elif pos == 'B':
+        color = ['k--', 'k--', 'k--', 'k--', 'k--', 'k--', 'k--']
+        a = 0.6
+
+    for i, c in zip(range(isos.shape[1]), color):
+        _plot(ax, xaxis, isos.T[i], c, a)
+
+
+def profile_plot(folder, y1='', y2=None, x='logxq',
+                 prof_n=None, model_n=None, xlim=[]):
+    path = ms.MesaLogDir(folder)
+    # hist = path.history
+
+    if prof_n is not None:
+        prof = path.profile_data(profile_number=prof_n)
+    elif model_n is not None:
+        prof = path.profile_data(model_number=prof_n)
+    else:
+        profiles = path.model_numbers
+        model = profiles[-1]
+        prof = path.profile_data(model_number=model)
+
+    if not xlim:
+        if x == 'logxq':
+            x0 = 0
+            x1 = 8
+            sign = -1
+        elif x == 'q':
+            x0 = 0
+            x1 = 1
+            sign
+    else:
+        x0 = xlim[0]
+        x1 = xlim[1]
+
+    if x == 'logxq':
+        xax = - prof.data(x)
+        xlbl = 'log(1-M/Mr)'
+    elif x == 'q':
+        xax = prof.data(x)
+        xlbl = 'M/Mr'
+
+    f, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
+    abundance_plot(prof, ax1, xax, pos='B')
+    ax12 = ax1.twinx()
+    ax12.plot(x, np.log10(prof.brunt_N2))
+    ax1.set_xlim(x0, x1)
+    y = prof.data(y1)
+    ax2.plot(xax, y, 'b', label=y1)
+    ax2.legend()
+
+    if y2 is not None:
+        ax3 = ax2.twinx()
+        y_2 = prof.data(y2)
+        ax3.plot(xax, y_2, 'r', label=y2)
+        ax3.set_ylabel(y2)
+        ax3.legend()
+        ax3.set_xlim(x0, x1)
+
+    ax2.set_xlim(x0, x1)
+    ax2.set_ylabel(y1)
+    ax2.set_xlabel(xlbl)
+    f.subplots_adjust(wspace=0.05)
+
+
+def bl_plot(folder, mod_n=None, x_axis='logxq', save=False,
+            name=None, xlim=[], ylim=[]):
+    '''
+    Plot chemical abundance with blunt and lamb frequencies
+
+    Parameter
+    ---------
+    folder  : str
+            path to LOGS folder -> '/path/to/LOGS/'
+    mod_n   : int
+            model number to calculate the profiles. If None, the last model
+            will be used
+    x_lim   : int
+            limit to x-axis on profile plot. Default = 12
+    title   : str
+            title to use on the plot -> 'title'
+    save    : bool
+            if True, save a .png file of the plot
+    name    : str
+            name of the .png file if the parameter save is True
+    x_axis  : str
+            can be 'logxq', 'q' or 'r'. If 'atm' is chosen, x-axis will be -log(1-q)
+            (better for atmosfere region). If 'nuc', x-axis will be q (better
+            for nucleus region). Default is 'atm'
+    isotope: Not implemented yet
+
+    Returns
+    -------
+    show the plot or save a .png file
+    '''
+
+    path = ms.MesaLogDir(folder)
+    hist = path.history
+
+    if mod_n is None:
+        profiles = path.model_numbers
+        model = profiles[-1]
+    else:
+        model = mod_n
+
+    prof = path.profile_data(model)
+
+    if x_axis == 'logxq':
+        xax = - prof.data(x_axis)
+        xlabel = r'$\log (1 - q)$'
+        x_lim = 8.0
+    elif x_axis == 'q':
+        xax = prof.data(x_axis)
+        x_lim = 1.0
+        xlabel = r'$\frac{m}{M}$'
+    elif x_axis == 'r':
+        r = 10**(prof.logR)
+        xax = r / r[0]
+        x_lim = 1.0
+        xlabel = r'$\frac{r}{R}$'
+
+    if not xlim:
+        x0 = 0
+        x1 = x_lim
+    else:
+        x0 = xlim[0]
+        x1 = xlim[1]
+
+    mass = hist.data('star_mass')
+
+    log_b = np.log10(prof.data('brunt_N2'))
+    log_l = np.log10(prof.data('lamb_S2'))
+
+    idx = np.argwhere(hist.model_number == model)[0]
+    h1_mstar = np.log10(hist.total_mass_h1[idx] / prof.star_mass)
+    he4_mstar = np.log10(hist.total_mass_he4[idx] / prof.star_mass)
+
+    f, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
+    abundance_plot(prof, ax1, xax, pos='F')
+    ax2.plot(xax, log_b)
+    ax22 = ax2.twinx()
+    ax22.plot(xax, log_l, 'r--')
+    ax1.legend(frameon=False, loc='best')
+    ax2.set_ylabel('log Brunt N2')
+    ax22.set_ylabel('log Lamb L2')
+    ax1.set_title('Mass: ' + str(np.round(mass[-1], 4)) +
+                  '  Teff: ' + str(np.round(prof.Teff, 1)) +
+                  '  log(Mh/M*): ' + str(np.round(h1_mstar[0], 2)) +
+                  '  log(Mhe/M*): ' + str(np.round(he4_mstar[0], 2)))
+    plt.tight_layout()
+    plt.xlabel(xlabel)
+    plt.xlim(x0, x1)
+
+    if not ylim:
+        y1 = None
+        y2 = None
+    else:
+        y1 = ylim[0]
+        y2 = ylim[1]
+
+    ax2.set_ylim(y1, y2)
+    if save is True:
+        plt.savefig(name + '.pdf')
+        return 'File save with name ' + name
+    else:
+        plt.show()
+
+
+def chemical_profile_plot(folder, mod_n=None, x_axis='logxq',
+                          save=False, name=None, xlim=[]):
+
+    path = ms.MesaLogDir(folder)
+    hist = path.history
+
+    if mod_n is None:
+        profiles = path.model_numbers
+        model = profiles[-1]
+    else:
+        model = mod_n
+
+    prof = path.profile_data(model)
+
+    if x_axis == 'logxq':
+        xax = - prof.data(x_axis)
+        xlabel = r'$\log (1 - q)$'
+        x_lim = 8.0
+    elif x_axis == 'q':
+        xax = prof.data(x_axis)
+        x_lim = 1.0
+        xlabel = r'$\frac{m}{M}$'
+    elif x_axis == 'r':
+        r = 10**(prof.logR)
+        xax = r / r[0]
+        x_lim = 1.0
+        xlabel = r'$\frac{r}{R}$'
+
+    if not xlim:
+        x0 = 0
+        x1 = x_lim
+    else:
+        x0 = xlim[0]
+        x1 = xlim[1]
+
+    mass = hist.data('star_mass')
+
+    idx = np.argwhere(hist.model_number == model)[0]
+    h1_mstar = np.log10(hist.total_mass_h1[idx] / prof.star_mass)
+    he4_mstar = np.log10(hist.total_mass_he4[idx] / prof.star_mass)
+
+    f, ax1 = plt.figure(figsize=(10, 8))
+    abundance_plot(prof, ax1, xax, pos='F')
+    ax1.legend(frameon=False, loc='best')
+    ax1.set_title('Mass: ' + str(np.round(mass[-1], 4)) +
+                  '  Teff: ' + str(np.round(prof.Teff, 1)) +
+                  '  log(Mh/M*): ' + str(np.round(h1_mstar[0], 2)) +
+                  '  log(Mhe/M*): ' + str(np.round(he4_mstar[0], 2)))
+    plt.tight_layout()
+    plt.xlabel(xlabel)
+    plt.xlim(x0, x1)
+
+    if save is True:
+        plt.savefig(name + '.pdf')
+        return 'File save with name ' + name
+    else:
+        plt.show()
+
+
+###############################################################################
+#                           history data stuff                                #
+###############################################################################
+
+def history_plot(folder, x='', y=''):
+    path = ms.MesaLogDir(folder)
+    hist = path.history
+    plt.plot(hist.data(x), hist.data(y))
+
+
 def hrd(folder, title=' ', save=False, name=None):
     '''
     Function to plot the Hertzsprung-Russel diagram
@@ -30,11 +330,9 @@ def hrd(folder, title=' ', save=False, name=None):
 
     path = ms.MesaLogDir(folder)
     hist = path.history
-    lum = hist.data('log_L')
-    teff = hist.data('log_Teff')
     mi = hist.initial_mass
     plt.figure(figsize=(10, 8))
-    plt.plot(teff, lum)
+    plt.plot(hist.log_Teff, hist.log_L)
     plt.gca().invert_xaxis()
     plt.suptitle('HR Diagram', fontsize=18)
     plt.title('Mi = ' + str(mi) + '  ' + title)
@@ -46,6 +344,51 @@ def hrd(folder, title=' ', save=False, name=None):
         return 'File save with name ' + name
     else:
         plt.show()
+
+
+###############################################################################
+#                             GYRE data stuff                                 #
+###############################################################################
+
+def read_data(file):
+    header = pd.read_csv(file, delim_whitespace=True, skiprows=2, nrows=1)
+    data = pd.read_csv(file, delim_whitespace=True, skiprows=5)
+    return header, data
+
+
+def summary(path):
+    '''
+    Procura pelo arquivo summary.txt no diretorio dado pela variável path
+    '''
+    head, data = read_data(os.path.join(path, 'summary.txt'))
+    return head, data
+
+
+def filter_l_np(data, l=1):
+    '''
+    filter data by l and n_p == 0
+    '''
+    sort = data[data['l'] == l]
+    sort = sort[sort['n_p'] == 0]
+    return sort
+
+
+def mode(path, mode):
+    '''
+    Procura pelo arquivo mode.xxxx.txt no diretorio dado pela variável path,
+    em que xxxx eh o numero do modo dado pela variavel mode.
+    Sera adicionado zeros na frente do numero,
+    de modo a fim de completar 5 caracteres
+    '''
+    head, data = read_data(os.path.join(path,
+                                        'mode.' + str(mode).zfill(5) + '.txt'))
+    return head, data
+
+
+######################################################
+# old code
+######################################################
+
 
 
 def abun_plot(folder, mod_n=None, x_lim=12, title=' ',
